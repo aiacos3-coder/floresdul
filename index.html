@@ -2,87 +2,144 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Ramo de Girasoles y Rosas</title>
+    <title>Ramo de Flores Realista - Vista Superior</title>
     <style>
-        body { margin: 0; background-color: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        canvas { box-shadow: 0 0 30px rgba(255,255,255,0.1); cursor: pointer; }
+        body {
+            margin: 0;
+            background-color: #030303; /* Fondo casi negro para resaltar las flores */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: sans-serif;
+        }
+        canvas {
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+        #loading {
+            position: absolute;
+            font-size: 1.5rem;
+        }
     </style>
 </head>
 <body>
-<canvas id="bouquetCanvas"></canvas>
+
+<div id="loading">Cargando flores realistas...</div>
+<canvas id="flowerCanvas" style="display:none;"></canvas>
 
 <script>
-    // Datos extraídos de tus archivos JSON (Simplificados para el ejemplo funcional)
-    const rosasData =; 
-    const sunflowersData =;
-
-    const canvas = document.getElementById('bouquetCanvas');
+    const canvas = document.getElementById('flowerCanvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = 800;
-    canvas.height = 800;
+    const loadingDiv = document.getElementById('loading');
 
-    // Función para convertir color RGB (0-255 o 0-1) a string CSS
-    function getColor(colorArray) {
-        const r = colorArray[0] > 1 ? colorArray[0] : colorArray[0] * 255;
-        const g = colorArray[1] > 1 ? colorArray[1] : colorArray[1] * 255;
-        const b = colorArray[2] > 1 ? colorArray[2] : colorArray[2] * 255;
-        return `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
-    }
+    // Definimos el tamaño del lienzo
+    canvas.width = 900;
+    canvas.height = 900;
 
-    function drawFlower(data, x, y, scale, rotation) {
+    // --- CONFIGURACIÓN DE LAS IMÁGENES ---
+    // Reemplaza estas URLs con las rutas reales a tus archivos JPG si las tienes localmente.
+    // Por ahora, usaré marcadores de posición que simulan tus imágenes.
+    const flowerSources = [
+        { src: 'ruta/a/tu/imagen_girasoles_vangogh.jpg', type: 'sunflower' },
+        { src: 'ruta/a/tu/imagen_rosas_reales.jpg', type: 'rose' }
+    ];
+
+    // Para que este código funcione DEMOSTRATIVAMENTE, usaré imágenes de ejemplo de internet.
+    // CUANDO TENGAS TUS ARCHIVOS, COMENTA ESTAS LÍNEAS Y DESCOMENTA LAS DE ARRIBA.
+    const demoSources = [
+        { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Vincent_Willem_van_Gogh_127.jpg/800px-Vincent_Willem_van_Gogh_127.jpg', type: 'sunflower' },
+        { src: 'https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?q=80&w=800&auto=format&fit=crop', type: 'rose' }
+    ];
+
+    const images = [];
+    let imagesLoaded = 0;
+
+    // Cargamos las imágenes
+    demoSources.forEach((source, index) => {
+        const img = new Image();
+        img.src = source.src;
+        img.onload = () => {
+            imagesLoaded++;
+            if (imagesLoaded === demoSources.length) {
+                startBouquet();
+            }
+        };
+        img.onerror = () => {
+            loadingDiv.innerHTML = "Error al cargar las imágenes. Asegúrate de que las rutas sean correctas.";
+        }
+        images.push({ img, type: source.type });
+    });
+
+    function drawRealFlower(img, x, y, radius, rotation) {
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(rotation);
-        ctx.scale(scale, scale);
 
-        // Centrar el dibujo basado en los límites de los puntos
-        const allPoints = data.flatMap(r => r.contour);
-        const minX = Math.min(...allPoints.map(p => p[0]));
-        const maxX = Math.max(...allPoints.map(p => p[0]));
-        const minY = Math.min(...allPoints.map(p => p[1]));
-        const maxY = Math.max(...allPoints.map(p => p[1]));
-        
-        const offsetX = -(minX + maxX) / 2;
-        const offsetY = -(minY + maxY) / 2;
-        ctx.translate(offsetX, offsetY);
+        // Crear un recorte circular para simular la vista superior de la flor
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.clip();
 
-        data.forEach(region => {
-            ctx.beginPath();
-            ctx.fillStyle = getColor(region.color);
-            const points = region.contour;
-            ctx.moveTo(points[0][0], points[0][1]);
-            for (let i = 1; i < points.length; i++) {
-                ctx.lineTo(points[i][0], points[i][1]);
-            }
-            ctx.closePath();
-            ctx.fill();
-        });
+        // Dibujar la imagen escalada y centrada dentro del recorte
+        const aspect = img.width / img.height;
+        let drawWidth, drawHeight;
+
+        if (aspect > 1) {
+            drawHeight = radius * 2;
+            drawWidth = drawHeight * aspect;
+        } else {
+            drawWidth = radius * 2;
+            drawHeight = drawWidth / aspect;
+        }
+
+        ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
         ctx.restore();
     }
 
-    function createBouquet() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function startBouquet() {
+        loadingDiv.style.display = 'none';
+        canvas.style.display = 'block';
         
-        const numFlores = 12; // Ajusta cuántas flores quieres
-        const bouquet = [];
+        // Creamos una mezcla de flores en un ramo circular
+        const flowersInBouquet = [];
+        const numFlores = 16;
+        const bouquetRadius = 250;
 
         for (let i = 0; i < numFlores; i++) {
-            bouquet.push({
-                type: Math.random() > 0.5 ? sunflowersData : rosasData,
-                x: canvas.width/2 + (Math.random() - 0.5) * 400,
-                y: canvas.height/2 + (Math.random() - 0.5) * 400,
-                scale: 0.5 + Math.random() * 0.7,
-                rotation: Math.random() * Math.PI * 2
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * bouquetRadius;
+            
+            flowersInBouquet.push({
+                imgObj: images[Math.floor(Math.random() * images.length)],
+                x: canvas.width / 2 + Math.cos(angle) * distance,
+                y: canvas.height / 2 + Math.sin(angle) * distance,
+                radius: 50 + Math.random() * 40,
+                rotation: Math.random() * Math.PI * 2,
+                // Añadimos una ligera variación de velocidad para la animación
+                speed: 0.002 + Math.random() * 0.003
             });
         }
 
-        // Dibujar las flores mezcladas
-        bouquet.forEach(f => drawFlower(f.type, f.x, f.y, f.scale, f.rotation));
-    }
+        // Ordenamos las flores por posición Y para que las de "atrás" se dibujen primero
+        flowersInBouquet.sort((a, b) => a.y - b.y);
 
-    // Iniciar y permitir regenerar con click
-    createBouquet();
-    canvas.addEventListener('click', createBouquet);
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            flowersInBouquet.forEach(f => {
+                // Pequeña animación de rotación
+                f.rotation += f.speed;
+                drawRealFlower(f.imgObj.img, f.x, f.y, f.radius, f.rotation);
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    }
 
 </script>
 </body>

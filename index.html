@@ -2,18 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flores </title>
-
+<title>Flores</title>
 <style>
-body {
-    margin: 0;
-    background: black;
-    overflow: hidden;
-}
-canvas {
-    display: block;
-}
+body { margin:0; background:black; }
+canvas { display:block; }
 </style>
 </head>
 <body>
@@ -30,11 +22,9 @@ canvas.height = window.innerHeight;
 ctx.lineJoin = "round";
 ctx.lineCap = "round";
 
-// cargar JSON
-async function load(file){
-    return fetch(file).then(r => r.json());
-}
-
+// 🔥 PEGA AQUÍ TU JSON
+const rosas = /* pega aqui tu rosas.json */;
+const girasoles = /* pega aqui tu sunflowers.json */;
 
 function prepare(regions){
     let pts = regions.flatMap(r => r.contour);
@@ -51,24 +41,20 @@ function prepare(regions){
     return {scale, cx, cy};
 }
 
-
 function drawRegions(regions, prep, offsetX, offsetY, angle){
     let rad = angle;
 
     regions.forEach(region => {
-        let color = `rgb(${region.color[0]},${region.color[1]},${region.color[2]})`;
-        ctx.fillStyle = color;
-
-        let pts = region.contour;
+        ctx.fillStyle = `rgb(${region.color[0]},${region.color[1]},${region.color[2]})`;
 
         ctx.beginPath();
 
-        pts.forEach((p, i) => {
+        region.contour.forEach((p, i) => {
             let x = (p[0] - prep.cx) * prep.scale;
             let y = (prep.cy - p[1]) * prep.scale;
 
-            let rx = x * Math.cos(rad) - y * Math.sin(rad);
-            let ry = x * Math.sin(rad) + y * Math.cos(rad);
+            let rx = x*Math.cos(rad) - y*Math.sin(rad);
+            let ry = x*Math.sin(rad) + y*Math.cos(rad);
 
             let px = rx + offsetX;
             let py = ry + offsetY;
@@ -82,63 +68,48 @@ function drawRegions(regions, prep, offsetX, offsetY, angle){
     });
 }
 
-let rosas, girasoles;
+let prepR = prepare(rosas);
+let prepS = prepare(girasoles);
 
-// cargar archivos
-Promise.all([
-    load("rosas.json"),
-    load("sunflowers.json")
-]).then(data => {
+let angle = 0;
+let time = 0;
 
-    rosas = data[0];
-    girasoles = data[1];
+let posiciones = [
+    [-220,120],
+    [220,120],
+    [0,-220],
+    [-150,-60],
+    [150,-60]
+];
 
-    let prepR = prepare(rosas);
-    let prepS = prepare(girasoles);
+function loop(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    let angle = 0;
-    let time = 0;
+    ctx.save();
+    ctx.translate(canvas.width/2, canvas.height/2);
 
-    
-    let posiciones = [
-        [-220,120],
-        [220,120],
-        [0,-220],
-        [-150,-60],
-        [150,-60]
-    ];
-
-    function loop(){
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.save();
-        ctx.translate(canvas.width/2, canvas.height/2);
-
-    
-        posiciones.forEach((p, i) => {
-            if(i < time){
-                drawRegions(rosas, prepR, p[0], p[1], angle);
-            }
-        });
-
-      
-        if(time > 2){
-            drawRegions(girasoles, prepS, 0, 200, angle);
+    posiciones.forEach((p,i)=>{
+        if(i < time){
+            drawRegions(rosas, prepR, p[0], p[1], angle);
         }
+    });
 
-        ctx.restore();
-
-        angle += 0.01;
-
-        if(time < posiciones.length + 1){
-            time += 0.02;
-        }
-
-        requestAnimationFrame(loop);
+    if(time > 2){
+        drawRegions(girasoles, prepS, 0, 200, angle);
     }
 
-    loop();
-});
+    ctx.restore();
+
+    angle += 0.01;
+
+    if(time < posiciones.length+1){
+        time += 0.02;
+    }
+
+    requestAnimationFrame(loop);
+}
+
+loop();
 </script>
 
 </body>

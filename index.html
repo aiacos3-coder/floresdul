@@ -2,10 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Flores</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flores 💛</title>
+
 <style>
-body { margin:0; background:black; }
-canvas { display:block; }
+body {
+    margin:0;
+    background:black;
+    overflow:hidden;
+}
+canvas {
+    display:block;
+}
 </style>
 </head>
 <body>
@@ -22,88 +30,106 @@ canvas.height = window.innerHeight;
 ctx.lineJoin = "round";
 ctx.lineCap = "round";
 
-// 🔥 PEGA AQUÍ TU JSON
-const rosas = /* pega aqui tu rosas.json */;
-const girasoles = /* pega aqui tu sunflowers.json */;
+let angle = 0;
+let appear = 0;
 
-function prepare(regions){
-    let pts = regions.flatMap(r => r.contour);
+// 🌹 flor tipo turtle (más realista)
+function drawFlower(x, y, size, petalColor, centerColor){
+    ctx.save();
+    ctx.translate(x, y);
 
-    let minX = Math.min(...pts.map(p => p[0]));
-    let maxX = Math.max(...pts.map(p => p[0]));
-    let minY = Math.min(...pts.map(p => p[1]));
-    let maxY = Math.max(...pts.map(p => p[1]));
-
-    let scale = Math.min(600/(maxX-minX), 600/(maxY-minY));
-    let cx = (minX + maxX)/2;
-    let cy = (minY + maxY)/2;
-
-    return {scale, cx, cy};
-}
-
-function drawRegions(regions, prep, offsetX, offsetY, angle){
-    let rad = angle;
-
-    regions.forEach(region => {
-        ctx.fillStyle = `rgb(${region.color[0]},${region.color[1]},${region.color[2]})`;
+    // pétalos
+    for(let i=0;i<36;i++){
+        ctx.rotate(Math.PI/18);
 
         ctx.beginPath();
+        ctx.moveTo(0,0);
 
-        region.contour.forEach((p, i) => {
-            let x = (p[0] - prep.cx) * prep.scale;
-            let y = (prep.cy - p[1]) * prep.scale;
+        ctx.bezierCurveTo(
+            size*0.2, -size*0.4,
+            size*0.8, -size*0.4,
+            0, -size
+        );
 
-            let rx = x*Math.cos(rad) - y*Math.sin(rad);
-            let ry = x*Math.sin(rad) + y*Math.cos(rad);
+        ctx.bezierCurveTo(
+            -size*0.8, -size*0.4,
+            -size*0.2, -size*0.4,
+            0,0
+        );
 
-            let px = rx + offsetX;
-            let py = ry + offsetY;
-
-            if(i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-        });
-
-        ctx.closePath();
+        ctx.fillStyle = petalColor;
         ctx.fill();
-    });
+    }
+
+    // centro
+    ctx.beginPath();
+    ctx.arc(0,0,size*0.3,0,Math.PI*2);
+    ctx.fillStyle = centerColor;
+    ctx.fill();
+
+    ctx.restore();
 }
 
-let prepR = prepare(rosas);
-let prepS = prepare(girasoles);
+// 🌿 tallo
+function drawStem(x,y,length){
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineTo(x,y+length);
+    ctx.strokeStyle = "green";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+}
 
-let angle = 0;
-let time = 0;
-
-let posiciones = [
-    [-220,120],
-    [220,120],
-    [0,-220],
-    [-150,-60],
-    [150,-60]
-];
+// 🌼 hojas
+function drawLeaf(x,y,side){
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.quadraticCurveTo(x+side*40,y+30,x,y+60);
+    ctx.quadraticCurveTo(x-side*40,y+30,x,y);
+    ctx.fillStyle = "green";
+    ctx.fill();
+}
 
 function loop(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     ctx.save();
     ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(angle);
 
-    posiciones.forEach((p,i)=>{
-        if(i < time){
-            drawRegions(rosas, prepR, p[0], p[1], angle);
+    // posiciones
+    let flowers = [
+        [-200, 100, "red"],
+        [200, 100, "pink"],
+        [0, -200, "orange"],
+        [-150, -50, "yellow"],
+        [150, -50, "gold"]
+    ];
+
+    flowers.forEach((f, i)=>{
+        if(i < appear){
+
+            drawStem(f[0], f[1], 120);
+            drawLeaf(f[0], f[1]+40, 1);
+            drawLeaf(f[0], f[1]+60, -1);
+
+            drawFlower(
+                f[0],
+                f[1],
+                60,
+                f[2],
+                "brown"
+            );
         }
     });
 
-    if(time > 2){
-        drawRegions(girasoles, prepS, 0, 200, angle);
-    }
-
     ctx.restore();
 
-    angle += 0.01;
+    // animación
+    angle += 0.005;
 
-    if(time < posiciones.length+1){
-        time += 0.02;
+    if(appear < flowers.length){
+        appear += 0.01;
     }
 
     requestAnimationFrame(loop);
